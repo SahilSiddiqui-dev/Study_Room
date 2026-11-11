@@ -35,6 +35,47 @@
 ### What is Pending:
 - Phase 1: `app.js` + `server.js`, security middleware, rate limiters, 404, extended `errorHandler`, `/api/health`.
 - Phase 2: Auth subsystem (validators, tokens, cookies, routes, protect/authorize middleware).
+
+## Phase 1: Application Skeleton, Security Middleware, Rate Limiters, Extended Error Handler (Completed)
+
+### What was built / refactored:
+1. **`server/src/app.js`**:
+   - `helmet()` mounted as first middleware.
+   - CORS configured with single explicit origin from `CLIENT_ORIGIN` (`http://localhost:5173`), `credentials: true`, allowlisted methods (`GET, POST, PUT, PATCH, DELETE, OPTIONS`) and allowlisted headers (`Content-Type, Authorization, Cookie`).
+   - `express.json({ limit: '10kb' })`, `cookieParser()`, `morgan('dev')` (disabled during testing).
+   - `app.set('trust proxy', 1)` enabled in production.
+   - Global rate limiter attached to `/api`.
+   - Health check: `GET /api/health` returning `{ success: true, data: { status: 'healthy', timestamp, environment } }`.
+   - 404 handler for unknown routes returning `{ success: false, message }`.
+   - Central `errorHandler` mounted last.
+2. **`server/src/middleware/errorHandler.js`**:
+   - Extended to cleanly handle:
+     - `AppError` -> `err.statusCode`, `err.message`
+     - `ZodError` -> 400 with `errors` array (`field`, `message`)
+     - Mongoose `ValidationError` -> 400 with field errors
+     - Mongoose `CastError` -> 400 (`Invalid value for field ...`)
+     - MongoDB duplicate key (`code: 11000`) -> 409 Conflict with friendly message naming the conflicting field from `keyPattern`/`keyValue`
+     - JWT errors (`JsonWebTokenError`, `TokenExpiredError`) -> 401
+     - Payload too large (413 / `entity.too.large`) -> 413
+     - Generic 500 error without exposing stack traces in production.
+3. **`server/src/middleware/rateLimiters.js`**:
+   - Created uniform envelopes returning 429 `{ success: false, message: ... }`:
+     - `globalLimiter`: 100 req / 15 min / IP
+     - `authLimiter`: 10 req / 15 min / IP
+     - `passwordLimiter`: 5 req / 15 min / IP
+     - `writeLimiter`: 60 req / 1 min / IP
+4. **`server/src/server.js`**:
+   - HTTP server creation, MongoDB connection, graceful shutdown on `SIGINT` and `SIGTERM`.
+5. **Verification**:
+   - Automated script `server/scripts/verify-phase1.js` verified 200 health, 404 not found, 413 payload limit, and CORS configuration.
+
+### Decisions Made:
+- Express 5 handles route matching without wildcard regex vulnerabilities; 404 middleware catches all unmatched requests and passes an `AppError(..., 404)` to `next()`.
+- MongoDB duplicate keys return HTTP 409 Conflict (fixed from previous 400).
+- Morgan logger is disabled when `NODE_ENV === 'test'` to avoid polluting test logs.
+
+### What is Pending:
+- Phase 2: Auth subsystem (validators, tokens, cookies, routes, protect/authorize middleware).
 - Phase 3: Users profile endpoints.
 - Phase 4: Rooms subsystem.
 - Phase 5: Sessions, focus events, break reasons.
