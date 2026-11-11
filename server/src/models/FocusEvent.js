@@ -49,3 +49,4 @@ focusEventSchema.index({ userId: 1, startedAt: 1 });
 focusEventSchema.index({ sessionId: 1 });
 
 module.exports = mongoose.model('FocusEvent', focusEventSchema);
+

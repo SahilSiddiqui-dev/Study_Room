@@ -40,3 +40,4 @@ router
   .get(validate({ params: idParamSchema }), eventController.getEvents);
 
 module.exports = router;
+

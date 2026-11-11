@@ -16,3 +16,4 @@ const authorize = (...roles) => {
 };
 
 module.exports = authorize;
+

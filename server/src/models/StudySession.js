@@ -63,3 +63,4 @@ const studySessionSchema = new mongoose.Schema(
 studySessionSchema.index({ userId: 1, startedAt: -1 });
 
 module.exports = mongoose.model('StudySession', studySessionSchema);
+

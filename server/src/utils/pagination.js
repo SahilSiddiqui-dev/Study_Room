@@ -12,3 +12,4 @@ const getPagination = (query = {}) => {
 };
 
 module.exports = { getPagination };
+

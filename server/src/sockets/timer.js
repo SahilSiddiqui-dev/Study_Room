@@ -103,3 +103,4 @@ class TimerManager {
 }
 
 module.exports = new TimerManager();
+

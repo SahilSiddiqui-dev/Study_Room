@@ -23,3 +23,4 @@ const validate = ({ body, query, params } = {}) => {
 };
 
 module.exports = validate;
+

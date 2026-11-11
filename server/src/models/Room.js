@@ -87,3 +87,4 @@ roomSchema.index({ subjectKey: 1, status: 1 });
 roomSchema.index({ hostId: 1 });
 
 module.exports = mongoose.model('Room', roomSchema);
+
