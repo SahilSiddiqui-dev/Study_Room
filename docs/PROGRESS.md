@@ -152,6 +152,49 @@
 
 ### What is Pending:
 - Phase 4: Rooms subsystem (model, validators, CRUD, join/leave, private rooms with joinCode).
+
+## Phase 4: Rooms Management, Privacy, & Collaboration (Completed)
+
+### What was built / refactored:
+1. **Model**:
+   - `server/src/models/Room.js`:
+     - Schema: `name` (3-50 chars), `subject`, `subjectKey` (lowercase-normalized), `isPrivate`, `joinCode` (6 random chars, private rooms only), `hostId` (ref User), `participants` ([ref User]), `status` ('open'|'closed'), `pomodoro` (`focusMin` 5-120 default 25, `breakMin` 1-30 default 5).
+     - Compound index: `{ subjectKey: 1, status: 1 }` and `{ hostId: 1 }`.
+2. **Validators**:
+   - `server/src/validators/room.validator.js`:
+     - `createRoomSchema`: strictly parses `name`, `subject`, `isPrivate`, `pomodoro`.
+     - `updateRoomSchema`: strictly whitelists updatable fields.
+     - `joinRoomSchema`: validates optional/required `joinCode`.
+     - `roomQuerySchema`: parses `subject`, `page`, `limit`.
+3. **Services & Controllers**:
+   - `server/src/services/room.service.js`:
+     - `createRoom`: generates 6-character hex join code for private rooms; sets host as first participant.
+     - `getRooms`: returns open public rooms and rooms where user is participant. Strips `joinCode` for non-hosts.
+     - `getRoomById`: returns room, populated host and participants. 403 on private room if not member/host; strips `joinCode` for non-hosts.
+     - `joinRoom`: validates join code for private rooms. De-duplicates participants on repeated join attempts.
+     - `leaveRoom`: removes user from room participants.
+     - `updateRoom`: restricted to `hostId` (403 for non-hosts).
+     - `deleteRoom`: soft-deletes room by setting `status = 'closed'` (403 for non-hosts).
+   - `server/src/controllers/room.controller.js`: handles request dispatching and envelopes.
+4. **Routes**:
+   - `server/src/routes/room.routes.js`:
+     - `POST /api/rooms`
+     - `GET /api/rooms`
+     - `GET /api/rooms/:id`
+     - `POST /api/rooms/:id/join`
+     - `POST /api/rooms/:id/leave`
+     - `PATCH /api/rooms/:id`
+     - `DELETE /api/rooms/:id`
+5. **Verification**:
+   - Automated script `server/scripts/verify-phase4.js` verified public/private creation, non-host 403 rejection on PATCH and DELETE, private room access control, joinCode masking for non-hosts, participant de-duplication on repeated join, host update and soft deletion (404 on subsequent get).
+
+### Decisions Made:
+- Private room join codes are 6-character cryptographically random uppercase hex strings.
+- Non-hosts never receive `joinCode` in API responses (`formatRoomForUser` strips it).
+- Repeated joins are idempotent and do not duplicate participants.
+
+### What is Pending:
+- Phase 5: Sessions, focus events, break reasons.
 - Phase 3: Users profile endpoints.
 - Phase 4: Rooms subsystem.
 - Phase 5: Sessions, focus events, break reasons.
