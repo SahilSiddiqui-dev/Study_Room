@@ -76,6 +76,49 @@
 
 ### What is Pending:
 - Phase 2: Auth subsystem (validators, tokens, cookies, routes, protect/authorize middleware).
+
+## Phase 2: Authentication & Authorization (Completed)
+
+### What was built / refactored:
+1. **Security & Cryptography Utilities**:
+   - `server/src/utils/password.js`:
+     - `hashPassword`: 12-round bcrypt hashing strictly in service layer.
+     - `comparePassword`: bcrypt comparison.
+     - `compareDummyPassword`: bcrypt comparison against a pre-computed 12-round hash when email is not found, mitigating timing enumeration attacks.
+   - `server/src/utils/token.js`:
+     - `signToken`: JWT creation encoding only user id, explicit `HS256` algorithm, expiry from `env.JWT_EXPIRES_IN`.
+     - `verifyToken`: explicit algorithm enforcement (`['HS256']`).
+   - `server/src/utils/cookies.js`:
+     - `setAuthCookie`: sets httpOnly, sameSite 'lax', secure (production only), path '/', matching JWT expiry.
+     - `clearAuthCookie`: clears cookie using identical options.
+   - `server/src/utils/sendResponse.js` and `pagination.js`.
+2. **Middleware**:
+   - `server/src/middleware/validate.js`: validates `req.body`, `req.query`, and `req.params` against Zod schemas, writes parsed output back to `req`.
+   - `server/src/middleware/protect.js`: verifies JWT from cookie (or Bearer fallback), fetches active user, rejects unauthenticated/deleted users with 401, attaches `req.user`.
+   - `server/src/middleware/authorize.js`: role-based authorization check, returns 403 on forbidden access.
+3. **Validators & Schemas**:
+   - `server/src/validators/auth.validator.js`:
+     - Strict schemas with `.strict()` preventing client-supplied role assignment or unrecognized parameters.
+     - Password rules: min 8, max 72 characters, must contain at least one letter and one number (`/^(?=.*[a-zA-Z])(?=.*\d)/`).
+     - Timezone validation: verified against `Intl.DateTimeFormat`.
+     - Strong types: string email blocks NoSQL operator injection (`{"$gt": ""}`).
+4. **Services, Controllers & Routes**:
+   - `server/src/services/auth.service.js`: `register` and `login` with timing attack protection.
+   - `server/src/controllers/auth.controller.js`: thin handlers managing cookie operations and response envelope.
+   - `server/src/routes/auth.routes.js`:
+     - `POST /api/auth/register` (public, `authLimiter`, validated)
+     - `POST /api/auth/login` (public, `authLimiter`, validated)
+     - `POST /api/auth/logout` (public)
+     - `GET /api/auth/me` (protected)
+5. **Verification**:
+   - Automated script `server/scripts/verify-phase2.js` passed all 9 checks including cookie setting, strict role rejection, duplicate 409, NoSQL injection rejection, authenticated me, unauthenticated 401, timing attack resistance, and logout.
+
+### Decisions Made:
+- Dummy hash verification (`compareDummyPassword`) is called whenever email lookup returns null, equalizing response times between non-existent emails and incorrect passwords.
+- NoSQL operator injection is completely blocked at the Zod layer before ever reaching service or MongoDB queries.
+
+### What is Pending:
+- Phase 3: Users/profile endpoints (`/users/me`, `/users/me/password`, `/users/avatars`, `/users/:username`).
 - Phase 3: Users profile endpoints.
 - Phase 4: Rooms subsystem.
 - Phase 5: Sessions, focus events, break reasons.

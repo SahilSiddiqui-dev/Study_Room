@@ -1,7 +1,7 @@
 const http = require('http');
 const { server } = require('../src/server');
 const { connectDB, disconnectDB } = require('../src/config/db');
-const User = require('../models/User');
+const User = require('../src/models/User');
 const env = require('../src/config/env');
 
 const runVerification = async () => {
