@@ -119,6 +119,39 @@
 
 ### What is Pending:
 - Phase 3: Users/profile endpoints (`/users/me`, `/users/me/password`, `/users/avatars`, `/users/:username`).
+
+## Phase 3: User Profiles and Account Management (Completed)
+
+### What was built / refactored:
+1. **Validators & Schemas**:
+   - `server/src/validators/user.validator.js`:
+     - `updateMeSchema`: strictly whitelists `avatar` (from `AVATAR_KEYS`) and `timezone` (IANA validated).
+     - `changePasswordSchema`: requires `currentPassword` and `newPassword` adhering to 8-72 char complexity rules.
+     - `usernameParamSchema`: validates route parameters for lowercase alphanumeric username format.
+2. **Services & Controllers**:
+   - `server/src/services/user.service.js`:
+     - `getMe`: fetches current user profile.
+     - `updateMe`: updates whitelisted avatar and timezone with Mongoose 9 `returnDocument: 'after'`.
+     - `changePassword`: verifies old password against stored hash, applies 12-round bcrypt hash to new password, updates database.
+     - `getAvatars`: returns available avatar options.
+     - `getUserProfile`: public profile returning only `{ username, avatar, createdAt }` without exposing sensitive fields (email, role, id, or passwordHash).
+   - `server/src/controllers/user.controller.js`: handles request dispatching and response envelopes.
+3. **Routes**:
+   - `server/src/routes/user.routes.js`:
+     - `GET /api/users/avatars` (public)
+     - `GET /api/users/me` (protected)
+     - `PATCH /api/users/me` (protected, validated)
+     - `PATCH /api/users/me/password` (protected, `passwordLimiter`, validated)
+     - `GET /api/users/:username` (public, validated)
+4. **Verification**:
+   - Automated script `server/scripts/verify-phase3.js` verified all 10 requirements: avatar enumeration, profile retrieval, avatar/timezone updates, avatar validation error (400), password mismatch rejection (400), password update, re-login with new password, public profile data leakage prevention, and 404 for unknown users.
+
+### Decisions Made:
+- Mongoose 9 deprecation warning resolved by adopting `returnDocument: 'after'`.
+- Public profile explicitly projects only `username`, `avatar`, and `createdAt` to guarantee privacy.
+
+### What is Pending:
+- Phase 4: Rooms subsystem (model, validators, CRUD, join/leave, private rooms with joinCode).
 - Phase 3: Users profile endpoints.
 - Phase 4: Rooms subsystem.
 - Phase 5: Sessions, focus events, break reasons.
