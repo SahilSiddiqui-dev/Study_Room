@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const os = require('os');
 
 const connectDB = async (customUri) => {
   const uri = customUri || process.env.MONGO_URI;
@@ -8,7 +9,10 @@ const connectDB = async (customUri) => {
   }
 
   try {
-    const conn = await mongoose.connect(uri);
+    const conn = await mongoose.connect(uri, {
+      runtimeAdapters: { os },
+      driverInfo: { name: 'studyroom', version: '1.0.0' },
+    });
     console.log(`Connected to MongoDB: ${conn.connection.host}/${conn.connection.name}`);
     return conn;
   } catch (err) {

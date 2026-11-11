@@ -361,12 +361,52 @@
 - Heatmap grouping projects date timestamps into the user's registered IANA timezone identifier before binning into weekday/hour slots.
 
 ### What is Pending:
-- Phase 8: Realistic seed script and Jest unit/integration test suite.
-- Phase 3: Users profile endpoints.
-- Phase 4: Rooms subsystem.
-- Phase 5: Sessions, focus events, break reasons.
-- Phase 6: Socket.IO (timer, presence, real-time events).
-- Phase 7: Analytics, coach, snapshot cron job, interventions.
 - Phase 8: Seed script and Jest test suite.
 - Phase 9: API Contract, REST Client requests, final end-to-end verification.
 - Phase 10: Handoff documentation (`PROJECT_CONTEXT.md` and `AGENTS.md`).
+
+## Phase 8: Database Seed Script & Complete Jest Test Suite (Completed)
+
+### What was built / refactored:
+1. **Realistic Database Seed Script (`server/src/seed/seed.js`)**:
+   - Seeded 1 administrator account: `admin@studyroom.test` / `Demo@1234` (role: `admin`).
+   - Seeded 3 demo user accounts: `alice@studyroom.test`, `bob@studyroom.test`, `charlie@studyroom.test` (passwords: `Demo@1234`, across distinct timezones `UTC`, `America/New_York`, `Asia/Kolkata`).
+   - Seeded 3 study rooms:
+     - "Programming Study Group" (public, active)
+     - "Mathematics Collective" (public, active)
+     - "Quantum Physics Syndicate" (private, joinCode: `PHYS99`)
+   - Generated 30 days of realistic study sessions (180 sessions, 525 focus events, 525 break reasons) distributed across varied subjects, times of day, interruption rates, and break reason categories (`social_media`, `snack`, `fatigue`, `bio`, `chore`, `phone_call`, `distraction`, `other`).
+   - Computed initial analytics snapshots automatically using `runSnapshotJob()` at the conclusion of the seed.
+   - Script executable via `npm run seed` or `npm --prefix server run seed`.
+2. **Jest Test Suite (`server/tests/`)**:
+   - `server/tests/setup.js`:
+     - Configured isolated test environment using database `studyroom_test`.
+     - Configured MongoDB driver runtime adapters (`{ runtimeAdapters: { os: require('os') } }`) to resolve dynamic import constraints under Jest CommonJS runner.
+     - Automates clean collection dropping `beforeEach` and `afterAll` with proper connection teardown.
+   - `server/tests/fqs.test.js`:
+     - Unit tests for `computeFqs(stats)`.
+     - Validates perfect score (100) for zero-interruption, 100% completion sessions.
+     - Validates score degradation on frequent context switching and high interruption rate.
+     - Validates safe edge case handling (empty stats, zero minutes -> returns 0 without NaN).
+   - `server/tests/coach.test.js`:
+     - Unit tests for rule-based coach engine.
+     - Validates `dominant_break_reason` trigger when a single category exceeds 40%.
+     - Validates `high_interruption_rate` trigger on > 6 interruptions/hour.
+     - Validates `evening_spike` trigger when evening interruptions cluster.
+     - Validates `session_length` trigger when short sessions have higher completion.
+     - Validates minimum session threshold enforcement.
+   - `server/tests/auth.test.js`:
+     - Integration tests covering user registration, login setting `httpOnly` cookie, rejection of malformed emails and short passwords, and `/api/auth/me` profile inspection.
+   - `server/tests/rooms.test.js`:
+     - Integration tests covering room creation, public/private access, participant deduplication on join, 403 Forbidden on non-host modification/deletion, and joinCode privacy guarantees.
+   - `server/tests/sessions.test.js`:
+     - Integration tests covering session initiation, 409 Conflict rejection when attempting a second active session, event logging, break reason logging, 409 Conflict rejection on duplicate break reason, and session termination with duration computation.
+   - Ran complete test suite: 5/5 test suites passed, 25/25 tests passing.
+
+### Decisions Made:
+- Mongoose connection in both `db.js` and `setup.js` provides `runtimeAdapters: { os }` to prevent dynamic import issues in Jest CJS environment.
+- Zod body validation middleware gracefully handles optional request bodies by defaulting undefined bodies to `{}` for validation schemas.
+
+### What is Pending:
+- Phase 9: API Contract (`docs/API_CONTRACT.md`), REST Client file (`server/requests.http`), Viva explanations (`docs/VIVA_NOTES.md`), `README.md` and end-to-end verification.
+- Phase 10: Handoff documentation (`docs/PROJECT_CONTEXT.md` under 400 lines and `AGENTS.md`).
