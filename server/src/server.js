@@ -3,6 +3,7 @@ const app = require('./app');
 const env = require('./config/env');
 const { connectDB, disconnectDB } = require('./config/db');
 const { initSocketServer, timerManager } = require('./sockets');
+const { initSnapshotCron } = require('./jobs/snapshot.job');
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -10,7 +11,7 @@ const server = http.createServer(app);
 // Initialize Socket.IO
 const io = initSocketServer(server);
 
-// Cron Job placeholder (wired in Phase 7)
+// Cron Job
 let cronJob = null;
 
 const setCronJob = (job) => {
@@ -20,10 +21,14 @@ const setCronJob = (job) => {
 const startServer = async () => {
   await connectDB();
 
+  // Initialize background cron jobs
+  cronJob = initSnapshotCron();
+
   server.listen(env.PORT, () => {
     console.log(`StudyRoom Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
     console.log(`CORS allowed origin: ${env.CLIENT_ORIGIN}`);
     console.log('Socket.IO real-time server attached');
+    console.log('Daily analytics snapshot cron job scheduled (00:05 daily)');
   });
 };
 

@@ -298,6 +298,70 @@
 
 ### What is Pending:
 - Phase 7: Analytics (aggregation pipelines, FQS calculation), coach rule engine, daily snapshot cron job, and interventions before/after reporting.
+
+## Phase 7: Analytics, Pure FQS Function, Rule-Based Coach, & Daily Snapshots (Completed)
+
+### What was built / refactored:
+1. **Models**:
+   - `server/src/models/AnalyticsSnapshot.js`:
+     - Fields: `userId`, `date` ('YYYY-MM-DD'), `fqs`, `interruptionRate`, `avgUninterruptedMin`, `topReason`, `recommendations`.
+     - Unique compound index: `{ userId: 1, date: 1 }`.
+   - `server/src/models/Intervention.js`:
+     - Fields: `userId`, `ruleId`, `suggestedAction`, `shownAt`, `baseline` (`avgUninterruptedMin`, `completionRate`, `interruptionRate`).
+     - Index: `{ userId: 1, shownAt: -1 }`.
+2. **Pure FQS Formula**:
+   - `server/src/utils/fqs.js`:
+     - Isolated pure mathematical function `computeFqs(stats)` implementing:
+       `40 * uninterruptedRatio + 25 * (1 - min(interruptionRate / 10, 1)) + 20 * sessionCompletion + 15 * (1 - min(contextSwitchRate / 10, 1))`
+     - Rounded to 1 decimal place; handles zero/empty data gracefully returning `0` without `NaN`.
+3. **Analytics Service**:
+   - `server/src/services/analytics.service.js`:
+     - Evaluates current and previous periods for a given range (`7d` or `30d`).
+     - Calculates: `activeMinutes`, `interruptionRate` (per hr), `avgUninterruptedMin` (exact gaps between interruptions inside sessions using start/end bounds), `recoveryTimeSec`, `sessionCompletion`, `uninterruptedRatio`, `contextSwitchRate`, and `fqs`.
+     - `getSummary`: returns current period, previous period, and delta metrics.
+     - `getReasons`: aggregates break counts and percentages joined by category.
+     - `getHeatmap`: 7x24 weekday-hour grid mapped according to user's IANA timezone from `User.timezone`.
+     - `getSubjects`: computes per-subject minutes, interruption rate, completion, and FQS.
+4. **Rule-Based Coach Engine**:
+   - `server/src/services/coach.service.js`:
+     - Pure rule functions evaluating analytics context and returning `{ ruleId, insight, evidence, suggestedAction }`:
+       1. `dominant_break_reason`: triggers when a category >= 40% of reasons with category-specific actionable recommendations.
+       2. `best_focus_window`: finds peak 2-hour window of high focus minutes and minimal interruptions.
+       3. `session_length`: identifies completion differences between <=30m and >30m sessions.
+       4. `high_interruption_rate`: flags overall rate > 6 interruptions/hr.
+       5. `evening_spike`: detects interruption clustering between 18:00 and 21:00.
+       6. `subject_weakness`: highlights subjects with interruption rates >= 1.5x user average.
+       7. `positive_reinforcement`: celebrates FQS increases >= 10 points.
+     - Enforces threshold of >= 3 sessions; returns up to 4 highest severity suggestions. Real numerical values quoted in evidence strings.
+5. **Interventions**:
+   - `server/src/services/intervention.service.js`:
+     - `createIntervention`: stores suggestion shown and computes 7-day prior baseline.
+     - `getInterventionsReport`: compares before vs after for interventions with at least 3 subsequent sessions, calculating metric deltas and `improved` boolean flag.
+6. **Snapshot Job**:
+   - `server/src/jobs/snapshot.job.js`:
+     - Scheduled at `00:05` daily via `node-cron`.
+     - Exports `runSnapshotJob(targetDateStr?)` for programmatic execution.
+     - Performs idempotent upsert per active user for daily snapshots.
+7. **Routes & Admin Authorization**:
+   - `server/src/routes/analytics.routes.js`:
+     - `GET /api/analytics/summary`
+     - `GET /api/analytics/reasons`
+     - `GET /api/analytics/heatmap`
+     - `GET /api/analytics/subjects`
+     - `GET /api/analytics/coach`
+     - `POST /api/analytics/snapshots/run` (`authorize('admin')`)
+   - `server/src/routes/intervention.routes.js`:
+     - `POST /api/interventions`
+     - `GET /api/interventions/report`
+8. **Verification**:
+   - Automated script `server/scripts/verify-phase7.js` verified summary metrics, reasons percentage, timezone-aware heatmap, subject breakdown, coach recommendations, baseline capture on intervention, before/after report generation, and admin-only snapshot run (403 for non-admin, 200 for admin).
+
+### Decisions Made:
+- The FQS formula calculates gaps between consecutive interruptions within each individual session using session boundaries to measure focus stamina accurately.
+- Heatmap grouping projects date timestamps into the user's registered IANA timezone identifier before binning into weekday/hour slots.
+
+### What is Pending:
+- Phase 8: Realistic seed script and Jest unit/integration test suite.
 - Phase 3: Users profile endpoints.
 - Phase 4: Rooms subsystem.
 - Phase 5: Sessions, focus events, break reasons.
