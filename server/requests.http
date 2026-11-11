@@ -1,0 +1,331 @@
+### ====================================================================
+### StudyRoom Backend - Complete REST Client Request File
+### Compatible with VS Code REST Client and IntelliJ HTTP Client
+### ====================================================================
+
+@baseUrl = http://localhost:5000/api
+@contentType = application/json
+
+# Demo Account Credentials (populated via `npm run seed`)
+@aliceEmail = alice@studyroom.test
+@adminEmail = admin@studyroom.test
+@password = Demo@1234
+
+### ====================================================================
+### 1. HEALTH CHECK
+### ====================================================================
+
+# @name healthCheck
+GET {{baseUrl}}/health
+Accept: application/json
+
+### ====================================================================
+### 2. AUTHENTICATION SUBSYSTEM (/api/auth)
+### ====================================================================
+
+# @name registerUser
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "study_ninja",
+  "email": "ninja@studyroom.test",
+  "password": "Password@123",
+  "avatar": "koala",
+  "timezone": "America/New_York"
+}
+
+###
+
+# @name loginAlice
+# Logs in Alice and sets the httpOnly cookie
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{aliceEmail}}",
+  "password": "{{password}}"
+}
+
+###
+
+# @name loginAdmin
+# Logs in Admin and sets the httpOnly cookie
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{password}}"
+}
+
+###
+
+# @name getAuthMe
+# Fetches currently authenticated user using session cookie
+GET {{baseUrl}}/auth/me
+Accept: application/json
+
+###
+
+# @name logoutUser
+# Clears the session cookie
+POST {{baseUrl}}/auth/logout
+Accept: application/json
+
+### ====================================================================
+### 3. USERS & PROFILE SUBSYSTEM (/api/users)
+### ====================================================================
+
+# @name getMyProfile
+GET {{baseUrl}}/users/me
+Accept: application/json
+
+###
+
+# @name updateMyProfile
+PATCH {{baseUrl}}/users/me
+Content-Type: {{contentType}}
+
+{
+  "avatar": "fox",
+  "timezone": "Europe/London"
+}
+
+###
+
+# @name updatePassword
+PATCH {{baseUrl}}/users/me/password
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "{{password}}",
+  "newPassword": "NewPassword@123"
+}
+
+###
+
+# @name getAvatarsList
+GET {{baseUrl}}/users/avatars
+Accept: application/json
+
+###
+
+# @name getPublicProfile
+GET {{baseUrl}}/users/alice
+Accept: application/json
+
+### ====================================================================
+### 4. ROOMS SUBSYSTEM (/api/rooms)
+### ====================================================================
+
+# @name createPublicRoom
+# Creates a public study room
+POST {{baseUrl}}/rooms
+Content-Type: {{contentType}}
+
+{
+  "name": "Machine Learning Lab",
+  "subject": "Data Science",
+  "isPrivate": false,
+  "pomodoro": {
+    "focusMin": 30,
+    "breakMin": 5
+  }
+}
+
+###
+
+# @name createPrivateRoom
+# Creates a private study room with generated join code
+POST {{baseUrl}}/rooms
+Content-Type: {{contentType}}
+
+{
+  "name": "Algorithms Syndicate",
+  "subject": "Algorithms",
+  "isPrivate": true,
+  "pomodoro": {
+    "focusMin": 45,
+    "breakMin": 10
+  }
+}
+
+###
+@roomId = 650000000000000000000001
+@joinCode = PHYS99
+
+# @name listRooms
+GET {{baseUrl}}/rooms?page=1&limit=10&subject=Mathematics
+Accept: application/json
+
+###
+
+# @name getRoomById
+GET {{baseUrl}}/rooms/{{roomId}}
+Accept: application/json
+
+###
+
+# @name updateRoom
+PATCH {{baseUrl}}/rooms/{{roomId}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Advanced Mathematics Syndicate",
+  "pomodoro": {
+    "focusMin": 50,
+    "breakMin": 10
+  }
+}
+
+###
+
+# @name joinRoom
+POST {{baseUrl}}/rooms/{{roomId}}/join
+Content-Type: {{contentType}}
+
+{
+  "joinCode": "{{joinCode}}"
+}
+
+###
+
+# @name leaveRoom
+POST {{baseUrl}}/rooms/{{roomId}}/leave
+Accept: application/json
+
+###
+
+# @name deleteRoom
+DELETE {{baseUrl}}/rooms/{{roomId}}
+Accept: application/json
+
+### ====================================================================
+### 5. SESSIONS & EVENTS SUBSYSTEM (/api/sessions, /api/events)
+### ====================================================================
+
+# @name startStudySession
+POST {{baseUrl}}/sessions
+Content-Type: {{contentType}}
+
+{
+  "subject": "Distributed Systems",
+  "plannedMinutes": 30
+}
+
+###
+
+# @name getActiveSession
+GET {{baseUrl}}/sessions/active
+Accept: application/json
+
+###
+@sessionId = 650000000000000000000002
+
+# @name logInterruptionEvent
+POST {{baseUrl}}/sessions/{{sessionId}}/events
+Content-Type: {{contentType}}
+
+{
+  "type": "tab_switch",
+  "durationSec": 45
+}
+
+###
+
+# @name listSessionEvents
+GET {{baseUrl}}/sessions/{{sessionId}}/events
+Accept: application/json
+
+###
+@eventId = 650000000000000000000003
+
+# @name attachBreakReason
+POST {{baseUrl}}/events/{{eventId}}/reason
+Content-Type: {{contentType}}
+
+{
+  "category": "phone",
+  "note": "Quick message reply"
+}
+
+###
+
+# @name endStudySession
+PATCH {{baseUrl}}/sessions/{{sessionId}}/end
+Content-Type: {{contentType}}
+
+{
+  "notes": "Reviewed consensus algorithms successfully"
+}
+
+###
+
+# @name listUserSessions
+GET {{baseUrl}}/sessions?page=1&limit=10&status=completed
+Accept: application/json
+
+### ====================================================================
+### 6. ANALYTICS & COACH ENGINE (/api/analytics)
+### ====================================================================
+
+# @name getAnalyticsSummary7d
+GET {{baseUrl}}/analytics/summary?range=7d
+Accept: application/json
+
+###
+
+# @name getAnalyticsSummary30d
+GET {{baseUrl}}/analytics/summary?range=30d
+Accept: application/json
+
+###
+
+# @name getBreakReasonsAnalysis
+GET {{baseUrl}}/analytics/reasons?range=7d
+Accept: application/json
+
+###
+
+# @name getFocusHeatmap
+GET {{baseUrl}}/analytics/heatmap?range=7d
+Accept: application/json
+
+###
+
+# @name getSubjectBreakdown
+GET {{baseUrl}}/analytics/subjects?range=30d
+Accept: application/json
+
+###
+
+# @name getCoachSuggestions
+GET {{baseUrl}}/analytics/coach
+Accept: application/json
+
+###
+
+# @name triggerSnapshotJobAdmin
+# Requires admin cookie
+POST {{baseUrl}}/analytics/snapshots/run
+Accept: application/json
+
+### ====================================================================
+### 7. INTERVENTIONS & OUTCOMES (/api/interventions)
+### ====================================================================
+
+# @name logCoachIntervention
+POST {{baseUrl}}/interventions
+Content-Type: {{contentType}}
+
+{
+  "ruleId": "dominant_break_reason",
+  "suggestedAction": "Enable 'Do Not Disturb' or place phone in another room during Pomodoro sessions."
+}
+
+###
+
+# @name getInterventionsReport
+GET {{baseUrl}}/interventions/report
+Accept: application/json

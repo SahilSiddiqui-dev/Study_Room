@@ -408,5 +408,45 @@
 - Zod body validation middleware gracefully handles optional request bodies by defaulting undefined bodies to `{}` for validation schemas.
 
 ### What is Pending:
-- Phase 9: API Contract (`docs/API_CONTRACT.md`), REST Client file (`server/requests.http`), Viva explanations (`docs/VIVA_NOTES.md`), `README.md` and end-to-end verification.
 - Phase 10: Handoff documentation (`docs/PROJECT_CONTEXT.md` under 400 lines and `AGENTS.md`).
+
+## Phase 9: Documentation, REST Client, and End-to-End Verification (Completed)
+
+### What was built / refactored:
+1. **API Contract (`docs/API_CONTRACT.md`)**:
+   - Comprehensive documentation for every HTTP endpoint: method, path, authentication level, request headers, body schema with Zod typing, query params, success response shapes, and error statuses with exact failure causes.
+   - Comprehensive Socket.IO specification: connection handshake, cookie auth transport, client-to-server and server-to-client events (`room:join`, `room:leave`, `room:presence`, `timer:start`, `timer:pause`, `timer:reset`, `timer:sync`, `timer:phase`, `focus:event`), acknowledgment signatures, and per-socket rate limiting.
+   - Explicit instructions for frontend developers on CORS and credentials (`withCredentials: true`, `credentials: 'include'`).
+   - Exact enum definitions documented (`AVATAR_KEYS`, `DEFAULT_KEY`, `USER_ROLES`, `ROOM_STATUS`, `EVENT_TYPES`, `REASON_CATEGORIES`, `TIMER_PHASES`).
+2. **Viva & Technical Examination Notes (`docs/VIVA_NOTES.md`)**:
+   - Detailed answers to the 6 core viva evaluation questions:
+     1. Why `httpOnly` cookies over `localStorage` for JWT (XSS immunity, automatic browser transport, SameSite/Secure defenses).
+     2. How rate limiters protect auth endpoints (layered IP limiting, dummy bcrypt timing attack mitigation).
+     3. Why Zod at controller boundary instead of Mongoose alone (fail-fast, query/param validation, `.strict()` mass assignment protection, sanitization).
+     4. How central `errorHandler` maps different errors to HTTP status codes (`AppError`, `ZodError`, `ValidationError`, `CastError`, duplicate key 409, JWT 401, payload 413, production 500 safety).
+     5. How the Pomodoro timer stays synchronized across clients without drift (authoritative server clock, interval engine, zero-second phase toggles, periodic broadcasts).
+     6. Derivation and justification of the Focus Quality Score (FQS) formula and weights (40% uninterrupted ratio, 25% interruption rate, 20% completion rate, 15% context switch rate, zero/empty data edge cases).
+3. **REST Client Request Collection (`server/requests.http`)**:
+   - Fully interactive HTTP client file covering every single endpoint in the backend.
+   - Organized logically with environment variables (`@baseUrl`, `@aliceEmail`, `@adminEmail`, `@password`, `@roomId`, `@sessionId`, `@eventId`).
+4. **Project README (`README.md`)**:
+   - Clear project summary, full tech stack, prerequisites, quick start guide, testing guide, 4-layer architecture diagram, and links to contract and context docs.
+5. **End-to-End Verification (`server/scripts/verify-e2e.js`)**:
+   - Executed complete student lifecycle across 10 steps:
+     1. `POST /api/auth/register` -> 201 Created
+     2. `POST /api/auth/login` -> 200 OK (captured session cookie)
+     3. `POST /api/rooms` -> 201 Created (created room)
+     4. `POST /api/sessions` -> 201 Created (started study session)
+     5. `POST /api/sessions/:id/events` -> 201 Created (logged tab_switch interruption)
+     6. `POST /api/events/:id/reason` -> 201 Created (attached phone break reason)
+     7. `PATCH /api/sessions/:id/end` -> 200 OK (ended study session)
+     8. `GET /api/analytics/summary` -> 200 OK (viewed summary metrics)
+     9. `GET /api/analytics/coach` -> 200 OK (viewed coaching feedback)
+     10. `POST /api/interventions` & `GET /api/interventions/report` -> 201 / 200 OK (logged intervention & generated baseline report)
+   - Verified 100% of the workflow completed with HTTP 200/201.
+
+### Decisions Made:
+- Standardized request payload parameters across API contract, tests, and REST client (`plannedMinutes` for session duration, `type` for focus event type, `category` for break reason category).
+
+### What is Pending:
+- Phase 10: Handoff documentation (`docs/PROJECT_CONTEXT.md` under 400 lines and root duplicate `AGENTS.md`).
