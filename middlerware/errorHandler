@@ -1,5 +1,0 @@
-const AppError = require('../utils/AppError');
-
-const errorHandler = () => {
-    
-}
