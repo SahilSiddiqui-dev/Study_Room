@@ -195,6 +195,65 @@
 
 ### What is Pending:
 - Phase 5: Sessions, focus events, break reasons.
+
+## Phase 5: Study Sessions, Focus Events, & Break Reasons (Completed)
+
+### What was built / refactored:
+1. **Models**:
+   - `server/src/models/StudySession.js`:
+     - Fields: `userId`, optional `roomId`, `subject` (denormalized or direct), `goal` (max 200), `plannedMinutes` (5-240), `startedAt`, `endedAt`, `actualMinutes`, `completed` (true when actualMinutes >= 0.9 * plannedMinutes).
+     - Index: `{ userId: 1, startedAt: -1 }`.
+   - `server/src/models/FocusEvent.js`:
+     - Fields: `sessionId`, `userId`, `type` (`tab_switch`, `idle`, `left_room`, `manual_break`, `planned_break`), `startedAt`, `durationSec`, `planned`.
+     - Indexes: `{ userId: 1, startedAt: 1 }`, `{ sessionId: 1 }`.
+   - `server/src/models/BreakReason.js`:
+     - Fields: `eventId` (unique ref FocusEvent), `userId`, `category` (`phone`, `notification`, `fatigue`, `difficult_topic`, `doubt`, `planned`, `other`), `note` (max 200).
+2. **Validators**:
+   - `server/src/validators/session.validator.js`:
+     - `createSessionSchema`: validates plannedMinutes (5-240), goal (max 200), requires either `subject` or `roomId`.
+     - `sessionQuerySchema`: validates pagination and ISO date filters (`from`, `to`).
+   - `server/src/validators/event.validator.js`:
+     - `createEventSchema`: strictly validates event type and non-negative duration.
+     - `createBreakReasonSchema`: validates break reason category and optional note.
+3. **Services & Controllers**:
+   - `server/src/services/session.service.js`:
+     - `startSession`: enforces single active session rule (409 if a session with `endedAt: null` exists), denormalizes room subject if not specified.
+     - `getActiveSession`: returns current active session or null.
+     - `endSession`: ownership check, computes `actualMinutes = Math.round((endedAt - startedAt) / 60000)`, sets `completed = actualMinutes >= 0.9 * plannedMinutes`.
+     - `getSessions`: paginated session history with date filtering.
+   - `server/src/services/event.service.js`:
+     - `createEvent`: logs event to user's own active session (400 if already ended, 403/404 if not owner).
+     - `getEventsBySession`: fetches session events for session owner.
+     - `createBreakReason`: logs break reason for user's own event; enforces one reason per event (409 on duplicate attempt).
+   - `server/src/controllers/session.controller.js` and `event.controller.js`: thin request handling and response envelope dispatching.
+4. **Routes**:
+   - `server/src/routes/session.routes.js`:
+     - `POST /api/sessions`
+     - `GET /api/sessions/active`
+     - `PATCH /api/sessions/:id/end`
+     - `GET /api/sessions`
+     - `POST /api/sessions/:id/events` (`writeLimiter`)
+     - `GET /api/sessions/:id/events`
+   - `server/src/routes/event.routes.js`:
+     - `POST /api/events/:id/reason` (`writeLimiter`)
+5. **Verification**:
+   - Automated script `server/scripts/verify-phase5.js` verified:
+     - Session start and 409 conflict when starting a concurrent active session.
+     - Cross-user session end rejection (403).
+     - Focus event logging (tab_switch and planned_break).
+     - Cross-user event manipulation rejection (403).
+     - Break reason logging and 409 conflict on duplicate reason for the same event.
+     - Session events retrieval and cross-user read rejection (403).
+     - Session completion calculation upon ending.
+     - Rejection of event logging on ended session (400).
+     - Active session state check returning null after ending.
+
+### Decisions Made:
+- Mongoose schema duplicate index on `BreakReason.eventId` was cleaned up by relying strictly on `unique: true` on the field definition.
+- Event creation requires an active session (`endedAt === null`); any attempt to log events on an ended session returns 400 Bad Request.
+
+### What is Pending:
+- Phase 6: Socket.IO (timer sync, presence, focus:event, disconnect handling) + socket-test script.
 - Phase 3: Users profile endpoints.
 - Phase 4: Rooms subsystem.
 - Phase 5: Sessions, focus events, break reasons.
