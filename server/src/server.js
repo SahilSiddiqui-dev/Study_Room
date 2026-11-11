@@ -2,13 +2,20 @@ const http = require('http');
 const app = require('./app');
 const env = require('./config/env');
 const { connectDB, disconnectDB } = require('./config/db');
+const { initSocketServer, timerManager } = require('./sockets');
 
 // Create HTTP server
 const server = http.createServer(app);
 
-// Sockets and Cron Jobs will be attached in future phases
-let io = null;
+// Initialize Socket.IO
+const io = initSocketServer(server);
+
+// Cron Job placeholder (wired in Phase 7)
 let cronJob = null;
+
+const setCronJob = (job) => {
+  cronJob = job;
+};
 
 const startServer = async () => {
   await connectDB();
@@ -16,6 +23,7 @@ const startServer = async () => {
   server.listen(env.PORT, () => {
     console.log(`StudyRoom Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
     console.log(`CORS allowed origin: ${env.CLIENT_ORIGIN}`);
+    console.log('Socket.IO real-time server attached');
   });
 };
 
@@ -27,8 +35,12 @@ const shutdown = async (signal) => {
     cronJob.stop();
   }
 
+  // Clear in-memory room timers
+  timerManager.clearAll();
+
   if (io && typeof io.close === 'function') {
     await new Promise((resolve) => io.close(resolve));
+    console.log('Socket.IO server closed');
   }
 
   server.close(async () => {
@@ -37,7 +49,6 @@ const shutdown = async (signal) => {
     process.exit(0);
   });
 
-  // Force shutdown after 10s timeout
   setTimeout(() => {
     console.error('Graceful shutdown timeout exceeded. Forcing exit.');
     process.exit(1);
@@ -47,7 +58,6 @@ const shutdown = async (signal) => {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-// Handle unhandled rejections and exceptions
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
@@ -61,4 +71,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { server, app };
+module.exports = { server, app, io, setCronJob };

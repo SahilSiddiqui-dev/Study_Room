@@ -254,6 +254,50 @@
 
 ### What is Pending:
 - Phase 6: Socket.IO (timer sync, presence, focus:event, disconnect handling) + socket-test script.
+
+## Phase 6: Real-Time Sockets, Timer Sync, & Live Presence (Completed)
+
+### What was built / refactored:
+1. **Authentication Middleware**:
+   - `server/src/sockets/auth.js`:
+     - Parses socket handshake cookie header using `cookie.parse || cookie.parseCookie` (supporting both v0/1 and v2 cookie specifications).
+     - Verifies JWT with explicit HS256 algorithm enforcement.
+     - Fetches active user and attaches to `socket.data.user`, rejecting unauthenticated sockets.
+2. **Presence Management**:
+   - `server/src/sockets/presence.js`:
+     - In-memory tracker mapping `roomId -> Map<userId, { user, socketIds: Set }>`.
+     - De-duplicates presence when a user connects from multiple tabs, broadcasting `{ roomId, participants: [{ userId, username, avatar }] }`.
+     - Tracks when a user's final socket leaves a room.
+3. **Authoritative Clock & Timer Engine**:
+   - `server/src/sockets/timer.js`:
+     - Server owns the clock: in-memory `Map` of active room timers (`phase`, `focusMin`, `breakMin`, `remainingSec`, `intervalId`, `hostId`).
+     - Broadcasts `timer:sync { roomId, phase, remainingSec, serverTime }` every second while running.
+     - Automatically flips between `'focus'` and `'break'` phases and emits `timer:phase { roomId, phase }`.
+     - Sends current state immediately to late joiners on `room:join`.
+     - Automatically terminates interval and cleans memory when a room becomes empty.
+4. **Socket Handlers & Event Bus**:
+   - `server/src/sockets/index.js`:
+     - Per-socket rate limiter enforcing a maximum of 20 events per 10-second window, emitting an `'error'` event when exceeded.
+     - `room:join`: verifies room existence and private room access; joins room; emits updated presence and syncs running timer to late joiner.
+     - `room:leave`: removes user socket; updates presence; logs `'left_room'` FocusEvent if user's last socket left while having an active session; cleans timer if room empty.
+     - `timer:start`: host-only control (`room.hostId === socket.data.user._id`), starting countdown with room's pomodoro settings.
+     - `focus:event`: validates payload with Zod `createEventSchema`, verifies active session, persists `FocusEvent` to database, and acks with `{ success: true, eventId }`.
+     - `disconnect`: cleans up user sockets across all rooms, broadcasts presence updates, records `'left_room'` event on active session on final socket disconnect, and tears down timers for empty rooms.
+5. **Server Integration & Verification Script**:
+   - Attached Socket.IO to HTTP server in `server/src/server.js`.
+   - Created `server/scripts/socket-test.js`:
+     - Logs in two users over HTTP.
+     - Creates room and study session.
+     - Establishes two Socket.IO connections authenticating via cookies.
+     - Verifies presence de-duplication, timer start and client synchronization, and `focus:event` ack callback.
+     - Verified clean exit and resource teardown.
+
+### Decisions Made:
+- Handled `cookie` library v2.0.2 export changes (`parseCookie` vs `parse`) to ensure reliable cookie parsing across all environments.
+- The server in-memory timer operates on a 1-second interval, ensuring clients only render authoritative server time and avoiding client clock drift.
+
+### What is Pending:
+- Phase 7: Analytics (aggregation pipelines, FQS calculation), coach rule engine, daily snapshot cron job, and interventions before/after reporting.
 - Phase 3: Users profile endpoints.
 - Phase 4: Rooms subsystem.
 - Phase 5: Sessions, focus events, break reasons.
