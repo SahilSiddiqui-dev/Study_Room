@@ -111,3 +111,4 @@ describe('Rooms Subsystem Integration Tests', () => {
     expect(joinRes.body.data.room.joinCode).toBeUndefined();
   });
 });
+

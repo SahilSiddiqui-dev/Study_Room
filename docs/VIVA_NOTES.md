@@ -95,3 +95,4 @@ This guide provides concise, technically rigorous answers to key architecture, s
 - **Robustness**:
   - Evaluated via a pure mathematical utility function `computeFqs(stats)`.
   - Gracefully handles zero-minute sessions or empty historical records by returning `0.0` without `NaN` or divide-by-zero errors.
+

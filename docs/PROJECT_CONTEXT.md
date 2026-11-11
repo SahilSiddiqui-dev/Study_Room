@@ -188,3 +188,4 @@ node scripts/verify-e2e.js
 - **Local MongoDB Transactions**: Standalone local MongoDB installations run without replica sets; distributed multi-document ACID transactions (`session.withTransaction`) are not supported and are avoided in favor of idempotent single-document and query checks.
 - **Single-Node Socket.IO State**: Room timer intervals and presence sets are held in Node.js process memory. Multi-instance horizontal scaling will require attaching `@socket.io/redis-adapter` and storing active timer states in Redis.
 - **No Video / No LLM**: Architecture intentionally uses deterministic mathematical scoring and rule-based coaching for predictable latency, complete data privacy, and zero operational API costs.
+

@@ -124,3 +124,4 @@ The backend strictly enforces clean separation of concerns across four distinct 
 - **Viva & Technical Notes**: [`docs/VIVA_NOTES.md`](docs/VIVA_NOTES.md) - Concise answers to oral examination questions on architecture, security, and formulas.
 - **Project Context & Handoff**: [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) - Single source of truth context document for future maintainers.
 - **REST Client Requests**: [`server/requests.http`](server/requests.http) - Interactive HTTP request collection for testing all endpoints.
+
