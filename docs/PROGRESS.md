@@ -471,4 +471,57 @@
 - Standardized request payload parameters across API contract, tests, and REST client (`plannedMinutes` for session duration, `type` for focus event type, `category` for break reason category).
 
 ### What is Pending:
-- Phase 10: Handoff documentation (`docs/PROJECT_CONTEXT.md` under 400 lines and root duplicate `AGENTS.md`).
+- None. Backend 10 phases completed and verified.
+
+---
+
+## Phase 11: Complete React Frontend Implementation & Client Verification (November 15, 2026)
+
+### What was built / refactored:
+1. **Analysis & Contracts Alignment**:
+   - Performed deep inspection of server code, validators, models, socket dispatchers, and documentation.
+   - Produced `docs/FRONTEND_ANALYSIS.md` specifying user flows, endpoint maps, socket maps, and build phases.
+   - Produced `docs/CONTRACT_MISMATCHES.md` recording disparities between documentation and actual implementation (e.g. `timer:pause`/`timer:reset` omitted on server, `serverTime` in `timer:sync`, `createEventSchema` signature).
+   - Produced `docs/BACKEND_ISSUES.md` capturing feature requests for backend maintainers (e.g. joining `BreakReason` in `GET /api/sessions/:id/events`, public snapshot time-series endpoint).
+2. **Project Scaffolding & Configuration**:
+   - Initialized Vite 5 + React 18 in `client/`.
+   - Configured Tailwind CSS 3 with dark/light mode class strategy and accessible focus rings.
+   - Configured strict port 5173 matching backend `CLIENT_ORIGIN`.
+   - Setup `client/.env.example` and local `client/.env`.
+3. **Core Services & Contexts**:
+   - `client/src/api/axios.js`: Central Axios instance with `withCredentials: true` and response interceptor redirecting to `/login` on 401 (excluding bootstrap `/auth/me` and `/auth/login`) and evicting query cache.
+   - Modular API services: `auth.api.js`, `user.api.js`, `room.api.js`, `session.api.js`, `analytics.api.js`, `intervention.api.js`.
+   - `AuthContext`: Bootstraps session via `GET /api/auth/me`, provides dynamic avatar list and profile updates.
+   - `SocketContext`: Connects authenticated WebSocket with cookie transport, disconnects on logout.
+   - `ThemeContext`: Toggles and persists dark/light theme in `localStorage`.
+4. **SVG Avatars & Visual Assets**:
+   - Designed 5 original vector SVG avatars in `client/src/assets/avatars/`: `owl`, `fox`, `panda`, `cat`, `bear`.
+   - Created `<Avatar>` component mapping keys to SVG graphics with clean fallback to initials.
+5. **Real-Time Hooks & Focus Tracking**:
+   - `useServerTimer`: Synchronizes with server Pomodoro broadcasts, compensates for network latency offset via `serverTime`, and executes local 1-second ticks for smooth UI rendering.
+   - `useRoomPresence`: Tracks connected participants, deduplicates multi-tab connections, and auto-reconnects on drop.
+   - `useFocusTracking`: Listens to `document.visibilitychange` and 60-second inactivity timeouts; emits `focus:event` with ack callback and debounce guards, immediately prompting the break reason modal.
+6. **Pages & Features**:
+   - `LoginPage` & `RegisterPage`: Client-side validation mirroring server Zod schemas; quick-login buttons for seeded demo users (`alice`, `bob`).
+   - `RoomsPage`: Filter by subject, pagination, create room modal, join private room modal with code prompt, host close action.
+   - `RoomPage`: Real-time room presence roster, synchronized Pomodoro timer, personal study session controls, manual break action.
+   - `BreakReasonModal`: One-tap category selection from server enum, optional note, 20-second auto-dismiss progress bar.
+   - `SessionSummaryPage` & `SessionsHistoryPage`: Completion badges, planned vs actual comparison, chronological event timeline.
+   - `DashboardPage`: Range toggle (7d / 30d), mathematical FQS semi-circle gauge with delta badge, 4 key stat cards, Recharts break reason breakdown, 7x24 CSS grid focus heatmap mapped to user timezone, subject comparison bar chart, coach rule cards with "I'll try this" button, and before-vs-after empirical intervention report.
+   - `ProfilePage` & `PublicProfilePage`: Avatar selector, timezone auto-detection, password change form, and public profile view (`/u/:username`).
+   - Layout: Responsive `Navbar`, `LoadingSpinner`, `ErrorBoundary`, `NotFoundPage`, and `react-hot-toast` notifications.
+7. **Automated Testing & Production Build**:
+   - Authored 5 Vitest suites (25 tests) covering Zod schemas, pure timer offset calculations, error extractor, `useFocusTracking` visibility/idle timers, and `BreakReasonModal` component interaction.
+   - Verified 25/25 tests passing.
+   - Verified production build via `npm run build` (compiled clean in 14.36s).
+   - Generated `docs/QA_CHECKLIST.md` with full manual verification steps.
+
+### Decisions Made:
+- Kept all authentication cookies strictly `httpOnly` with zero `localStorage` token storage.
+- Used smooth local 1-second ticker in `useServerTimer` so the Pomodoro clock displays second-by-second countdown without waiting for network packets.
+- Implemented a 1,000ms debounce guard in `useFocusTracking` to ensure rapid visibility toggles or mouse movements never fire duplicate distraction events.
+- Handled HTTP 409 Conflict quietly on break reason submissions to avoid alarming users if network packets duplicate.
+
+### What is Pending:
+- None. Full React frontend is completed, tested, running, and verified against the live backend server.
+

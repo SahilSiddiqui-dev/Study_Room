@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <circle cx="50" cy="50" r="46" fill="#ec4899" />
+  <!-- Ears -->
+  <polygon points="22,18 42,38 18,46" fill="#f472b6" />
+  <polygon points="78,18 82,46 58,38" fill="#f472b6" />
+  <polygon points="26,24 38,38 24,42" fill="#fdf2f8" />
+  <polygon points="74,24 76,42 62,38" fill="#fdf2f8" />
+  <!-- Head -->
+  <circle cx="50" cy="56" r="32" fill="#fbcfe8" />
+  <!-- Eyes -->
+  <ellipse cx="38" cy="52" rx="4" ry="7" fill="#831843" />
+  <ellipse cx="62" cy="52" rx="4" ry="7" fill="#831843" />
+  <circle cx="39" cy="50" r="1.5" fill="#ffffff" />
+  <circle cx="63" cy="50" r="1.5" fill="#ffffff" />
+  <!-- Nose -->
+  <polygon points="50,60 46,65 54,65" fill="#be185d" />
+  <!-- Whiskers -->
+  <line x1="22" y1="60" x2="36" y2="62" stroke="#be185d" stroke-width="2" stroke-linecap="round" />
+  <line x1="22" y1="67" x2="36" y2="65" stroke="#be185d" stroke-width="2" stroke-linecap="round" />
+  <line x1="78" y1="60" x2="64" y2="62" stroke="#be185d" stroke-width="2" stroke-linecap="round" />
+  <line x1="78" y1="67" x2="64" y2="65" stroke="#be185d" stroke-width="2" stroke-linecap="round" />
+</svg>

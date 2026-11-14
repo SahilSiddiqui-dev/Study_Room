@@ -96,3 +96,43 @@ This guide provides concise, technically rigorous answers to key architecture, s
   - Evaluated via a pure mathematical utility function `computeFqs(stats)`.
   - Gracefully handles zero-minute sessions or empty historical records by returning `0.0` without `NaN` or divide-by-zero errors.
 
+---
+
+## 7. Frontend Viva & Oral Examination Notes
+
+### Question 7: How does cookie authentication work on the frontend client, and why is `localStorage` avoided?
+
+**Answer:**
+- **Zero Client-Side Token Exposure**: The browser's JavaScript runtime never accesses or reads the JWT token. The backend sets the token in an `httpOnly`, `SameSite=Lax` cookie.
+- **Automatic Transport**: In the Axios instance (`client/src/api/axios.js`) and the Socket.IO client (`client/src/socket/SocketContext.jsx`), requests are configured with `withCredentials: true`. The browser automatically includes the cookie in all HTTP requests and the WebSocket upgrade handshake.
+- **Why Avoid `localStorage`**: Storing auth tokens in `localStorage` or `sessionStorage` exposes tokens to Cross-Site Scripting (XSS) exfiltration. If any dependency is compromised, tokens can be stolen via `window.localStorage`. With `httpOnly` cookies, client JavaScript cannot access `document.cookie`, neutralizing XSS token theft.
+
+---
+
+### Question 8: How does the Pomodoro timer stay synchronized across multiple clients without clock drift or UI lag?
+
+**Answer:**
+- **Authoritative Server Broadcasts**: The backend server runs an authoritative 1-second countdown interval and periodically broadcasts `timer:sync` `{ roomId, phase, remainingSec, serverTime }`.
+- **Clock Transit & Offset Compensation**: The client calculates transit elapsed time using the pure function `computeRemainingSeconds(serverRemainingSec, serverTime, Date.now())`. This accounts for network latency between the moment the server broadcast was emitted and when the client rendered it.
+- **Smooth Local Interpolation**: Between periodic server sync packets, a local 1-second `setInterval` decrements the display countdown locally (`remainingSec -= 1`). This provides a smooth, second-by-second countdown without UI stutter or jumpy network rendering. When a new sync packet arrives, state aligns automatically with zero cumulative drift.
+
+---
+
+### Question 9: How does the client focus tracking hook (`useFocusTracking`) detect distractions?
+
+**Answer:**
+- **Tab Switching**: The hook binds to `document.addEventListener('visibilitychange')`. When `document.hidden` becomes true (user minimizes browser or switches tabs), a high-resolution timestamp `hiddenTime` is recorded. When the user returns (`document.hidden` false), the elapsed duration in seconds is computed and emitted to the server via socket `focus:event { type: 'tab_switch', durationSec }`.
+- **Inactivity & Idle Detection**: The hook monitors user input events (`mousemove`, `keydown`, `mousedown`, `touchstart`, `scroll`). A 60-second inactivity timer marks the user as idle (`isIdle = true`). When the user resumes activity, the idle duration is computed and emitted as `focus:event { type: 'idle', durationSec }`.
+- **Debounce Guards**: A 1,000ms debounce guard prevents duplicate events when returning to the tab.
+- **Immediate Acknowledgment**: The server's socket event acknowledgment callback returns `{ success: true, eventId }`. The hook immediately passes this `eventId` to surface the `BreakReasonModal` for one-tap categorization.
+
+---
+
+### Question 10: How do the TanStack Query cache and the global Axios 401 response interceptor interact?
+
+**Answer:**
+- **Global 401 Interception**: An Axios response interceptor intercepts any HTTP 401 Unauthorized status returned by protected endpoints.
+- **Exclusion Filters**: The bootstrap call (`GET /api/auth/me`) and the login submission (`POST /api/auth/login`) are excluded from redirect logic to avoid infinite navigation loops during page load.
+- **Cache Eviction**: When a genuine 401 occurs, the interceptor invokes `queryClient.clear()` to purge all cached user data, study room rosters, and analytics from process memory before redirecting the window to `/login`. This guarantees that subsequent users or sessions never see stale cached data.
+
+
