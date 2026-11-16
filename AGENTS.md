@@ -188,3 +188,18 @@ node scripts/verify-e2e.js
 - **Local MongoDB Transactions**: Standalone local MongoDB installations run without replica sets; distributed multi-document ACID transactions (`session.withTransaction`) are not supported and are avoided in favor of idempotent single-document and query checks.
 - **Single-Node Socket.IO State**: Room timer intervals and presence sets are held in Node.js process memory. Multi-instance horizontal scaling will require attaching `@socket.io/redis-adapter` and storing active timer states in Redis.
 - **No Video / No LLM**: Architecture intentionally uses deterministic mathematical scoring and rule-based coaching for predictable latency, complete data privacy, and zero operational API costs.
+
+## 13. Frontend Client Architecture & Implementation Status
+- **Stack**: Vite + React 18, React Router 6, TanStack Query v5, Tailwind CSS 3, Socket.IO Client, Recharts, `react-hook-form` with Zod resolver, Lucide React, `react-hot-toast`, Vitest.
+- **Directory Structure (`client/src/`)**:
+  - `api/`: Modular Axios API layer with `withCredentials: true` and 401 cache-clearing interceptor.
+  - `assets/avatars/`: 5 original vector SVG avatars (`owl`, `fox`, `panda`, `cat`, `bear`).
+  - `components/`: Modular presentational and container components (`room/`, `charts/`, `modals/`, `analytics/`, `ui/`).
+  - `context/`: `AuthContext` (bootstraps with `GET /auth/me`), `ThemeContext` (dark/light toggle).
+  - `hooks/`: `useServerTimer` (authoritative clock with local smooth 1s interpolation), `useRoomPresence` (presence roster & auto-reconnect), `useFocusTracking` (tab switch & 60s idle detection).
+  - `pages/`: Login, Register, Rooms Lobby, Room Station, Dashboard, Session Summary, Session History, Profile, Public Profile, 404.
+  - `socket/`: `SocketContext` managing authenticated WebSocket connection.
+  - `test/`: 5 test suites (25 tests) covering validators, formatTime pure functions, error extraction, focus tracking hook, and reason modal.
+- **Current Status**: Complete. Frontend and backend are verified, running simultaneously on `http://localhost:5173` and `http://localhost:5000`.
+
+
