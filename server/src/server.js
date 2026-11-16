@@ -1,3 +1,8 @@
+const dns = require('node:dns');
+
+// Use public DNS resolvers for MongoDB Atlas SRV lookup
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
 const http = require('http');
 const app = require('./app');
 const env = require('./config/env');
