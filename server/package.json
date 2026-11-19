@@ -10,7 +10,7 @@
     "test": "jest --runInBand --detectOpenHandles --forceExit"
   },
   "engines": {
-    "node": "20.x"
+    "node": "26.x"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

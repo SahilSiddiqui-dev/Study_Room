@@ -18,7 +18,7 @@ StudyRoom is a live, collaborative study tracker and real-time Pomodoro backend 
 
 ## Prerequisites
 
-- **Node.js**: `v18.x` or `v20.x` or higher
+- **Node.js**: `v26.x`
 - **MongoDB**: Local standalone MongoDB instance running on `mongodb://127.0.0.1:27017` (default port). Note: Transactions are explicitly not required or used to ensure compatibility with standalone local installations.
 
 ---

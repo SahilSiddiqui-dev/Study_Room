@@ -9,7 +9,7 @@
     "test": "npm --prefix server test"
   },
   "engines": {
-    "node": "20.x"
+    "node": "26.x"
   }
 }
 
