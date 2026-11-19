@@ -14,6 +14,7 @@ const envSchema = z.object({
   CLIENT_ORIGIN: z.string().default('http://localhost:5173'),
   COOKIE_NAME: z.string().default('token'),
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).optional(),
+  COOKIE_SECURE: z.enum(['true', 'false']).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

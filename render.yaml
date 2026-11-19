@@ -21,5 +21,7 @@ services:
         value: token
       - key: COOKIE_SAME_SITE
         value: none
+      - key: COOKIE_SECURE
+        value: "true"
       - key: CLIENT_ORIGIN
         sync: false
