@@ -9,6 +9,21 @@ const connectDB = async (customUri) => {
   }
 
   try {
+    const parsedUri = new URL(uri);
+    const databaseName = decodeURIComponent(parsedUri.pathname.replace(/^\/+/, '')).split('/')[0];
+
+    if (!databaseName) {
+      throw new Error(
+        'MONGO_URI must include an explicit database name (for example: /studyroom)'
+      );
+    }
+
+    if (process.env.NODE_ENV !== 'test' && databaseName.toLowerCase() === 'test') {
+      throw new Error(
+        'Refusing to use the MongoDB "test" database outside test mode'
+      );
+    }
+
     const conn = await mongoose.connect(uri, {
       runtimeAdapters: { os },
       driverInfo: { name: 'studyroom', version: '1.0.0' },
