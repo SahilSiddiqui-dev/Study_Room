@@ -26,7 +26,7 @@ const parseExpiryToMs = (expiry) => {
 
 const getCookieOptions = () => ({
   httpOnly: true,
-  sameSite: 'lax',
+  sameSite: env.COOKIE_SAME_SITE || (env.NODE_ENV === 'production' ? 'none' : 'lax'),
   secure: env.NODE_ENV === 'production',
   maxAge: parseExpiryToMs(env.JWT_EXPIRES_IN),
   path: '/',

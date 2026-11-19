@@ -9,6 +9,9 @@
     "seed": "node src/seed/seed.js",
     "test": "jest --runInBand --detectOpenHandles --forceExit"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cookie": "^2.0.2",

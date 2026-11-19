@@ -10,6 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@tanstack/react-query": "^5.62.7",

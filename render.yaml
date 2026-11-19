@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: studyroom-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      - key: COOKIE_NAME
+        value: token
+      - key: COOKIE_SAME_SITE
+        value: none
+      - key: CLIENT_ORIGIN
+        sync: false

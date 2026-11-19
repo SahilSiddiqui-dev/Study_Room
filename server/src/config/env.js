@@ -13,6 +13,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('1d'),
   CLIENT_ORIGIN: z.string().default('http://localhost:5173'),
   COOKIE_NAME: z.string().default('token'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
