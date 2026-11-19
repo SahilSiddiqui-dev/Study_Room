@@ -10,7 +10,7 @@ const register = asyncHandler(async (req, res) => {
   const { user, token } = await authService.register(req.body);
   setAuthCookie(res, token);
   return sendResponse(res, 201, {
-    data: { user },
+    data: { user, token },
     message: 'User registered successfully',
   });
 });
@@ -22,7 +22,7 @@ const login = asyncHandler(async (req, res) => {
   const { user, token } = await authService.login(req.body);
   setAuthCookie(res, token);
   return sendResponse(res, 200, {
-    data: { user },
+    data: { user, token },
     message: 'Logged in successfully',
   });
 });
@@ -42,7 +42,7 @@ const logout = asyncHandler(async (req, res) => {
  */
 const getMe = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, {
-    data: { user: req.user },
+    data: { user: req.user, token: req.token },
   });
 });
 

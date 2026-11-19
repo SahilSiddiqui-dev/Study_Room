@@ -50,7 +50,7 @@ export const RoomPage = () => {
   const { participants } = useRoomPresence(roomId);
 
   // 4. Synchronized Authoritative Server Timer
-  const { phase, remainingSec, isRunning, startTimer } = useServerTimer(
+  const { phase, remainingSec, isRunning, startTimer, pauseTimer, resetTimer } = useServerTimer(
     roomId,
     room?.pomodoro || { focusMin: 25, breakMin: 5 }
   );
@@ -58,6 +58,8 @@ export const RoomPage = () => {
   // 5. Automatic Focus Detection Hook (tab switch & 60s idle tracking)
   const { takeBreak } = useFocusTracking({
     isSessionActive: Boolean(activeSession),
+    sessionId: activeSession?._id,
+    roomId,
     timerPhase: phase,
     onInterruption: (interruptionData) => {
       setInterruptionModal(interruptionData);
@@ -66,6 +68,26 @@ export const RoomPage = () => {
 
   const isHost =
     room && (room.hostId?._id === user?._id || room.hostId === user?._id);
+
+  const handleStartTimer = async (config) => {
+    // If user does not have an active session, auto-start one so interruptions & analytics are tracked
+    if (!activeSession) {
+      try {
+        await sessionApi.startSession({
+          roomId,
+          subject: room?.subject || 'General Study',
+          goal: 'Pomodoro focus study',
+          plannedMinutes: config?.focusMin || room?.pomodoro?.focusMin || 25,
+        });
+        refetchActiveSession();
+        toast.success('Study session active! Focus mode engaged.');
+      } catch (err) {
+        // If 409 (already active elsewhere), refetch active session
+        refetchActiveSession();
+      }
+    }
+    startTimer(config);
+  };
 
   const handleCopyCode = () => {
     if (room?.joinCode) {
@@ -171,7 +193,9 @@ export const RoomPage = () => {
             remainingSec={remainingSec}
             isRunning={isRunning}
             isHost={isHost}
-            onStartTimer={startTimer}
+            onStartTimer={handleStartTimer}
+            onPauseTimer={pauseTimer}
+            onResetTimer={resetTimer}
             pomodoroConfig={room.pomodoro}
           />
         </div>

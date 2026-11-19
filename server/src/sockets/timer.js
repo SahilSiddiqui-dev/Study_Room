@@ -25,6 +25,7 @@ class TimerManager {
       remainingSec: fMin * 60,
       hostId: hostId.toString(),
       intervalId: null,
+      isRunning: true,
     };
 
     // Emit initial phase and sync
@@ -33,6 +34,7 @@ class TimerManager {
       roomId,
       phase: state.phase,
       remainingSec: state.remainingSec,
+      isRunning: true,
       serverTime: new Date().toISOString(),
     });
 
@@ -56,12 +58,62 @@ class TimerManager {
         roomId,
         phase: state.phase,
         remainingSec: state.remainingSec,
+        isRunning: true,
         serverTime: new Date().toISOString(),
       });
     }, 1000);
 
     this.timers.set(roomId, state);
     return state;
+  }
+
+  /**
+   * Pause timer for a room
+   */
+  pause(io, roomId) {
+    if (this.timers.has(roomId)) {
+      const state = this.timers.get(roomId);
+      if (state.intervalId) {
+        clearInterval(state.intervalId);
+        state.intervalId = null;
+      }
+      state.isRunning = false;
+      io.to(roomId).emit('timer:sync', {
+        roomId,
+        phase: state.phase,
+        remainingSec: state.remainingSec,
+        isRunning: false,
+        serverTime: new Date().toISOString(),
+      });
+      return state;
+    }
+    return null;
+  }
+
+  /**
+   * Reset timer for a room
+   */
+  reset(io, roomId) {
+    if (this.timers.has(roomId)) {
+      const state = this.timers.get(roomId);
+      if (state.intervalId) {
+        clearInterval(state.intervalId);
+        state.intervalId = null;
+      }
+      state.remainingSec = state.focusMin * 60;
+      state.phase = 'focus';
+      state.isRunning = false;
+      io.to(roomId).emit('timer:phase', { roomId, phase: 'focus' });
+      io.to(roomId).emit('timer:sync', {
+        roomId,
+        phase: 'focus',
+        remainingSec: state.remainingSec,
+        isRunning: false,
+        serverTime: new Date().toISOString(),
+      });
+      return state;
+    }
+    return null;
   }
 
   /**
@@ -75,6 +127,7 @@ class TimerManager {
       roomId,
       phase: state.phase,
       remainingSec: state.remainingSec,
+      isRunning: Boolean(state.isRunning),
       serverTime: new Date().toISOString(),
     };
   }

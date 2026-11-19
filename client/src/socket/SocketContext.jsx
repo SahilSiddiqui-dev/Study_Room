@@ -8,7 +8,7 @@ const SocketContext = createContext(null);
 const SOCKET_URL = __SOCKET_URL__ || 'http://localhost:5000';
 
 export const SocketProvider = ({ children }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, token } = useAuth();
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -25,9 +25,10 @@ export const SocketProvider = ({ children }) => {
 
     const socketInstance = io(SOCKET_URL, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      auth: token ? { token } : undefined,
+      transports: ['polling', 'websocket'],
       autoConnect: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 20,
       reconnectionDelay: 1000,
     });
 

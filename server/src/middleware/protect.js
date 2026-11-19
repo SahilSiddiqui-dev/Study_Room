@@ -44,8 +44,9 @@ const protect = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // 4. Attach user to request
+  // 4. Attach user and token to request
   req.user = user;
+  req.token = token;
   next();
 });
 

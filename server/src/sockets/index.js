@@ -124,7 +124,7 @@ const initSocketServer = (httpServer) => {
 
     /**
      * timer:start { roomId, focusMin, breakMin }
-     * Host only!
+     * Allowed for room host or active room participant
      */
     socket.on('timer:start', async (data = {}) => {
       try {
@@ -138,18 +138,30 @@ const initSocketServer = (httpServer) => {
           return socket.emit('error', { message: 'Room not found or closed' });
         }
 
-        if (room.hostId.toString() !== user._id.toString()) {
-          return socket.emit('error', {
-            message: 'Only the room host can start the timer',
-          });
+        const isHost = room.hostId.toString() === user._id.toString();
+        const isParticipant =
+          Array.isArray(room.participants) &&
+          room.participants.some(
+            (p) => (p._id || p).toString() === user._id.toString()
+          );
+
+        if (!isHost && !isParticipant) {
+          if (!room.isPrivate) {
+            room.participants.push(user._id);
+            await room.save();
+          } else {
+            return socket.emit('error', {
+              message: 'You must join this room to control the timer',
+            });
+          }
         }
 
         timerManager.start(
           io,
           roomId,
           {
-            focusMin: focusMin || room.pomodoro.focusMin,
-            breakMin: breakMin || room.pomodoro.breakMin,
+            focusMin: focusMin || room.pomodoro?.focusMin || 25,
+            breakMin: breakMin || room.pomodoro?.breakMin || 5,
           },
           user._id
         );
@@ -159,7 +171,33 @@ const initSocketServer = (httpServer) => {
     });
 
     /**
-     * focus:event { type, durationSec, planned } (with ack callback)
+     * timer:pause { roomId }
+     */
+    socket.on('timer:pause', async (data = {}) => {
+      try {
+        const { roomId } = data;
+        if (!roomId) return;
+        timerManager.pause(io, roomId);
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
+    /**
+     * timer:reset { roomId }
+     */
+    socket.on('timer:reset', async (data = {}) => {
+      try {
+        const { roomId } = data;
+        if (!roomId) return;
+        timerManager.reset(io, roomId);
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
+    /**
+     * focus:event { type, durationSec, planned, roomId } (with ack callback)
      */
     socket.on('focus:event', async (data = {}, callback) => {
       const ack = typeof callback === 'function' ? callback : () => {};
@@ -170,15 +208,29 @@ const initSocketServer = (httpServer) => {
           return ack({ success: false, message: 'Validation failed for focus:event' });
         }
 
-        const activeSession = await StudySession.findOne({
+        let activeSession = await StudySession.findOne({
           userId: user._id,
           endedAt: null,
         });
 
+        // If no active session exists, automatically start one so the interruption is never lost!
         if (!activeSession) {
-          return ack({
-            success: false,
-            message: 'No active study session found to attach event to',
+          const targetRoomId = data.roomId || presenceManager.getRoomsForSocket(socket.id)[0] || null;
+          let subject = 'General Study';
+          if (targetRoomId) {
+            const room = await Room.findById(targetRoomId);
+            if (room && room.subject) {
+              subject = room.subject;
+            }
+          }
+
+          activeSession = await StudySession.create({
+            userId: user._id,
+            roomId: targetRoomId,
+            subject,
+            goal: 'Focus study',
+            plannedMinutes: 25,
+            startedAt: new Date(),
           });
         }
 

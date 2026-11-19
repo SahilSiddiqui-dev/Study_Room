@@ -82,7 +82,8 @@ export const RoomsPage = () => {
       if (room.isPrivate) {
         setSelectedPrivateRoom(room);
       } else {
-        toast.error(err.response?.data?.message || 'Could not join room');
+        // User is already a participant or room is open: navigate smoothly to room
+        navigate(`/rooms/${room._id}`);
       }
     }
   };

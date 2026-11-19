@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, RotateCcw, Clock, Sparkles } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clock, Sparkles } from 'lucide-react';
 import { formatSeconds } from '../../utils/formatTime';
 
 export const PomodoroDisplay = ({
@@ -8,6 +8,8 @@ export const PomodoroDisplay = ({
   isRunning = false,
   isHost = false,
   onStartTimer,
+  onPauseTimer,
+  onResetTimer,
   pomodoroConfig = { focusMin: 25, breakMin: 5 },
 }) => {
   const [focusMin, setFocusMin] = useState(pomodoroConfig.focusMin || 25);
@@ -50,9 +52,9 @@ export const PomodoroDisplay = ({
           }`}
         >
           <span
-            className={`w-2 h-2 rounded-full animate-ping ${
-              isBreak ? 'bg-emerald-500' : 'bg-indigo-500'
-            }`}
+            className={`w-2 h-2 rounded-full ${
+              isRunning ? 'animate-ping' : ''
+            } ${isBreak ? 'bg-emerald-500' : 'bg-indigo-500'}`}
           />
           <span>{isBreak ? 'Break Interval' : 'Focus Interval'}</span>
         </span>
@@ -71,82 +73,101 @@ export const PomodoroDisplay = ({
         <span>
           {isRunning
             ? `Synchronized with server (${isBreak ? 'Break' : 'Focus'} phase)`
-            : 'Waiting for room host to start timer'}
+            : 'Timer is ready. Click Start Timer to begin.'}
         </span>
       </p>
 
-      {/* Host Controls */}
-      {isHost && (
-        <div className="w-full max-w-sm pt-4 border-t border-slate-100 dark:border-slate-800">
-          {!showConfig ? (
-            <div className="flex items-center justify-center gap-3">
+      {/* Timer Controls */}
+      <div className="w-full max-w-sm pt-4 border-t border-slate-100 dark:border-slate-800">
+        {!showConfig ? (
+          <div className="flex items-center justify-center gap-3">
+            {!isRunning ? (
               <button
                 type="button"
-                onClick={() => onStartTimer({ focusMin, breakMin })}
+                onClick={() => onStartTimer && onStartTimer({ focusMin, breakMin })}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 focus-ring transition-all"
               >
                 <Play className="w-4 h-4 fill-white" />
-                <span>{isRunning ? 'Restart Timer' : 'Start Timer'}</span>
+                <span>Start Timer</span>
               </button>
-
-              <button
-                type="button"
-                onClick={() => setShowConfig(true)}
-                className="px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                Configure
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleStartSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-left">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    Focus (min)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="120"
-                    value={focusMin}
-                    onChange={(e) => setFocusMin(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    Break (min)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={breakMin}
-                    onChange={(e) => setBreakMin(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2">
+            ) : (
+              <>
                 <button
                   type="button"
-                  onClick={() => setShowConfig(false)}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  onClick={() => onPauseTimer && onPauseTimer()}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all"
                 >
-                  Cancel
+                  <Pause className="w-4 h-4 fill-current" />
+                  <span>Pause</span>
                 </button>
                 <button
-                  type="submit"
-                  className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                  type="button"
+                  onClick={() => onResetTimer && onResetTimer()}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all"
                 >
-                  Apply & Start
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Reset</span>
                 </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowConfig(true)}
+              className="px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Configure
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleStartSubmit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-2 text-left">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Focus (min)
+                </label>
+                <input
+                  type="number"
+                  min="5"
+                  max="120"
+                  value={focusMin}
+                  onChange={(e) => setFocusMin(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
               </div>
-            </form>
-          )}
-        </div>
-      )}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Break (min)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={breakMin}
+                  onChange={(e) => setBreakMin(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowConfig(false)}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              >
+                Apply & Start
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 };

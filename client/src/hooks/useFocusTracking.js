@@ -1,14 +1,17 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '../socket/SocketContext';
+import sessionApi from '../api/session.api';
 
 const IDLE_THRESHOLD_MS = 60 * 1000; // 60 seconds
 
 /**
- * Hook for detecting focus interruptions (tab switching, 60s idle timeout, manual breaks).
- * Active strictly when an active session is in progress AND timer phase is 'focus'.
+ * Hook for detecting focus interruptions (tab switching, window unfocus, 60s idle timeout, manual breaks).
+ * Active when a study session is active (or in focus mode).
  */
 export const useFocusTracking = ({
   isSessionActive,
+  sessionId,
+  roomId,
   timerPhase = 'focus',
   onInterruption,
 }) => {
@@ -20,43 +23,76 @@ export const useFocusTracking = ({
   const idleStartTimeRef = useRef(null);
   const lastEmitTimeRef = useRef(0);
 
-  // Helper to emit focus:event with ack callback and debounce guard
+  // Helper to emit focus:event with ack callback, REST fallback, and debounce guard
   const emitFocusEvent = useCallback(
-    ({ type, durationSec = 0, planned = false }) => {
-      if (!socket || !isConnected) return;
-
+    async ({ type, durationSec = 0, planned = false }) => {
       const now = Date.now();
-      // Guard against duplicate emits within 1000ms
-      if (now - lastEmitTimeRef.current < 1000) {
+      // Guard against duplicate emits within 1200ms
+      if (now - lastEmitTimeRef.current < 1200) {
         return;
       }
       lastEmitTimeRef.current = now;
 
-      socket.emit(
-        'focus:event',
-        {
-          type,
-          durationSec: Math.max(0, Math.round(durationSec)),
-          planned: Boolean(planned),
-        },
-        (response) => {
-          if (response?.success && response.eventId) {
-            if (onInterruption && !planned) {
-              onInterruption({
-                eventId: response.eventId,
-                type,
-                durationSec: Math.max(0, Math.round(durationSec)),
-                planned: false,
-              });
+      const durSec = Math.max(0, Math.round(durationSec));
+      const payload = {
+        type,
+        durationSec: durSec,
+        planned: Boolean(planned),
+        roomId,
+      };
+
+      let eventHandled = false;
+
+      // 1. Try socket emit first if connected
+      if (socket && isConnected) {
+        try {
+          socket.emit('focus:event', payload, (response) => {
+            if (response?.success && response.eventId) {
+              eventHandled = true;
+              if (onInterruption && !planned) {
+                onInterruption({
+                  eventId: response.eventId,
+                  type,
+                  durationSec: durSec,
+                  planned: false,
+                });
+              }
             }
+          });
+        } catch (err) {
+          console.warn('Socket emit focus:event error:', err);
+        }
+      }
+
+      // 2. Fallback to REST API if socket not connected or didn't handle
+      setTimeout(async () => {
+        if (!eventHandled && sessionId) {
+          try {
+            const res = await sessionApi.createSessionEvent(sessionId, {
+              type,
+              durationSec: durSec,
+              planned: Boolean(planned),
+            });
+            if (res?.success && res.data?.event?._id) {
+              if (onInterruption && !planned) {
+                onInterruption({
+                  eventId: res.data.event._id,
+                  type,
+                  durationSec: durSec,
+                  planned: false,
+                });
+              }
+            }
+          } catch (err) {
+            console.warn('REST focus event fallback error:', err);
           }
         }
-      );
+      }, 300);
     },
-    [socket, isConnected, onInterruption]
+    [socket, isConnected, onInterruption, sessionId, roomId]
   );
 
-  // 1. Tab Switching Detection (document.visibilitychange)
+  // 1. Tab Switching & Window Blur Detection
   useEffect(() => {
     // Only track when session is active and phase is 'focus'
     if (!isSessionActive || timerPhase !== 'focus') {
@@ -64,32 +100,44 @@ export const useFocusTracking = ({
       return;
     }
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Tab went to background
+    const handleFocusLoss = () => {
+      if (!hiddenTimeRef.current) {
         hiddenTimeRef.current = Date.now();
-      } else {
-        // Tab became visible again
-        if (hiddenTimeRef.current) {
-          const durationSec = (Date.now() - hiddenTimeRef.current) / 1000;
-          hiddenTimeRef.current = null;
+      }
+    };
 
-          // Ignore instantaneous tab blips < 1s
-          if (durationSec >= 1) {
-            emitFocusEvent({
-              type: 'tab_switch',
-              durationSec,
-              planned: false,
-            });
-          }
+    const handleFocusGain = () => {
+      if (hiddenTimeRef.current) {
+        const elapsed = (Date.now() - hiddenTimeRef.current) / 1000;
+        hiddenTimeRef.current = null;
+
+        // Count any switch >= 0.5 seconds
+        if (elapsed >= 0.5) {
+          emitFocusEvent({
+            type: 'tab_switch',
+            durationSec: Math.max(1, Math.round(elapsed)),
+            planned: false,
+          });
         }
       }
     };
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handleFocusLoss();
+      } else {
+        handleFocusGain();
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleFocusLoss);
+    window.addEventListener('focus', handleFocusGain);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleFocusLoss);
+      window.removeEventListener('focus', handleFocusGain);
       hiddenTimeRef.current = null;
     };
   }, [isSessionActive, timerPhase, emitFocusEvent]);
@@ -113,7 +161,7 @@ export const useFocusTracking = ({
         if (durationSec >= 1) {
           emitFocusEvent({
             type: 'idle',
-            durationSec,
+            durationSec: Math.max(1, Math.round(durationSec)),
             planned: false,
           });
         }

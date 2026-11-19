@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [avatars, setAvatars] = useState(['owl', 'fox', 'panda', 'cat', 'bear']);
 
@@ -15,12 +16,17 @@ export const AuthProvider = ({ children }) => {
       const result = await authApi.getMe();
       if (result.success && result.data?.user) {
         setUser(result.data.user);
+        if (result.data?.token) {
+          setToken(result.data.token);
+        }
       } else {
         setUser(null);
+        setToken(null);
       }
     } catch (err) {
       // 401 or network error simply means not logged in
       setUser(null);
+      setToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -47,6 +53,9 @@ export const AuthProvider = ({ children }) => {
     const result = await authApi.login(credentials);
     if (result.success && result.data?.user) {
       setUser(result.data.user);
+      if (result.data?.token) {
+        setToken(result.data.token);
+      }
       return result.data.user;
     }
     throw new Error(result.message || 'Login failed');
@@ -56,6 +65,9 @@ export const AuthProvider = ({ children }) => {
     const result = await authApi.register(userData);
     if (result.success && result.data?.user) {
       setUser(result.data.user);
+      if (result.data?.token) {
+        setToken(result.data.token);
+      }
       return result.data.user;
     }
     throw new Error(result.message || 'Registration failed');
@@ -68,6 +80,7 @@ export const AuthProvider = ({ children }) => {
       // Still clear local user on error
     } finally {
       setUser(null);
+      setToken(null);
     }
   };
 
@@ -77,6 +90,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    token,
     isLoading,
     isAuthenticated: Boolean(user),
     avatars,

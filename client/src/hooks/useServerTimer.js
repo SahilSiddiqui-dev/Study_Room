@@ -11,11 +11,18 @@ export const useServerTimer = (roomId, initialConfig = { focusMin: 25, breakMin:
   const { socket, isConnected } = useSocket();
 
   const [phase, setPhase] = useState('focus'); // 'focus' | 'break'
-  const [remainingSec, setRemainingSec] = useState(initialConfig.focusMin * 60);
+  const [remainingSec, setRemainingSec] = useState((initialConfig.focusMin || 25) * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [serverTime, setServerTime] = useState(null);
 
   const localTickRef = useRef(null);
+
+  // Keep remainingSec updated when initialConfig loads or changes while idle
+  useEffect(() => {
+    if (!isRunning && initialConfig?.focusMin) {
+      setRemainingSec(initialConfig.focusMin * 60);
+    }
+  }, [initialConfig?.focusMin, isRunning]);
 
   // Sync state from server packet
   const handleTimerSync = useCallback((data) => {
@@ -24,15 +31,16 @@ export const useServerTimer = (roomId, initialConfig = { focusMin: 25, breakMin:
     if (data.phase) setPhase(data.phase);
     if (data.serverTime) setServerTime(data.serverTime);
 
-    // Compute remaining seconds adjusting for network transit latency
-    const computedSec = computeRemainingSeconds(
-      data.remainingSec,
-      data.serverTime,
-      Date.now()
-    );
+    // If server provides remainingSec directly, sync immediately
+    if (typeof data.remainingSec === 'number') {
+      setRemainingSec(Math.max(0, Math.floor(data.remainingSec)));
+    }
 
-    setRemainingSec(computedSec);
-    setIsRunning(true);
+    if (typeof data.isRunning === 'boolean') {
+      setIsRunning(data.isRunning);
+    } else {
+      setIsRunning(true);
+    }
   }, [roomId]);
 
   // Phase transition event
@@ -77,17 +85,43 @@ export const useServerTimer = (roomId, initialConfig = { focusMin: 25, breakMin:
     };
   }, [isRunning]);
 
-  // Host action: emit timer:start
+  // Start / restart timer action
   const startTimer = useCallback((customConfig = {}) => {
-    if (!socket || !isConnected) return;
+    const fMin = parseInt(customConfig.focusMin || initialConfig.focusMin, 10) || 25;
+    const bMin = parseInt(customConfig.breakMin || initialConfig.breakMin, 10) || 5;
 
-    const payload = {
-      roomId,
-      focusMin: customConfig.focusMin || initialConfig.focusMin,
-      breakMin: customConfig.breakMin || initialConfig.breakMin,
-    };
+    // Optimistically update UI immediately (0ms lag)
+    setRemainingSec(fMin * 60);
+    setPhase('focus');
+    setIsRunning(true);
 
-    socket.emit('timer:start', payload);
+    if (socket && isConnected) {
+      socket.emit('timer:start', {
+        roomId,
+        focusMin: fMin,
+        breakMin: bMin,
+      });
+    }
+  }, [socket, isConnected, roomId, initialConfig]);
+
+  // Pause timer action
+  const pauseTimer = useCallback(() => {
+    setIsRunning(false);
+    if (socket && isConnected) {
+      socket.emit('timer:pause', { roomId });
+    }
+  }, [socket, isConnected, roomId]);
+
+  // Reset timer action
+  const resetTimer = useCallback(() => {
+    const fMin = parseInt(initialConfig.focusMin, 10) || 25;
+    setIsRunning(false);
+    setRemainingSec(fMin * 60);
+    setPhase('focus');
+
+    if (socket && isConnected) {
+      socket.emit('timer:reset', { roomId });
+    }
   }, [socket, isConnected, roomId, initialConfig]);
 
   return {
@@ -95,6 +129,8 @@ export const useServerTimer = (roomId, initialConfig = { focusMin: 25, breakMin:
     remainingSec,
     isRunning,
     startTimer,
+    pauseTimer,
+    resetTimer,
     serverTime,
   };
 };

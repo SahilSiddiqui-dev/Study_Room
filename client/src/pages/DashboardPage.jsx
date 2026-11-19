@@ -75,7 +75,8 @@ export const DashboardPage = () => {
   const heatmap = heatmapData?.data?.heatmap || [];
   const timezone = heatmapData?.data?.timezone || 'UTC';
   const subjects = subjectsData?.data?.subjects || [];
-  const recommendations = coachData?.data?.recommendations || [];
+  const recommendations =
+    coachData?.data?.suggestions || coachData?.data?.recommendations || [];
   const report = reportData?.data?.report || [];
 
   return (
