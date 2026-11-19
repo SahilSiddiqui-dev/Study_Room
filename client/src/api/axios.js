@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Read API URL from environment variable, falling back to standard local port
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Injected at build time; this public endpoint URL is not a secret
+const API_BASE_URL = __API_URL__ || 'http://localhost:5000/api';
 
 /**
  * Standard Axios instance configured with cookie authentication.

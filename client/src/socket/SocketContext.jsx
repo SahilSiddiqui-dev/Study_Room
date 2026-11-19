@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 
 const SocketContext = createContext(null);
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// Injected at build time; this public endpoint URL is not a secret
+const SOCKET_URL = __SOCKET_URL__ || 'http://localhost:5000';
 
 export const SocketProvider = ({ children }) => {
   const { isAuthenticated, user } = useAuth();

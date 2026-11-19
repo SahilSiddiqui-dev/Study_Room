@@ -23,8 +23,8 @@ The frontend client for StudyRoom is a responsive, accessible React single-page 
 
 Create a local `.env` file inside `client/`:
 ```env
-VITE_API_URL=http://localhost:5000/api
-VITE_SOCKET_URL=http://localhost:5000
+API_URL=http://localhost:5000/api
+SOCKET_URL=http://localhost:5000
 ```
 *(See `client/.env.example` for reference. Never commit `.env` to Git).*
 
