@@ -9,9 +9,20 @@ const FocusEvent = require('../models/FocusEvent');
 const { createEventSchema } = require('../validators/event.validator');
 
 const initSocketServer = (httpServer) => {
+  const allowedOrigins = [
+    env.CLIENT_ORIGIN,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ];
+
   const io = new Server(httpServer, {
     cors: {
-      origin: env.CLIENT_ORIGIN,
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error(`Origin ${origin} not allowed by Socket CORS`));
+      },
       credentials: true,
       methods: ['GET', 'POST'],
     },

@@ -24,7 +24,7 @@ const startServer = async () => {
   // Initialize background cron jobs
   cronJob = initSnapshotCron();
 
-  server.listen(env.PORT, () => {
+  server.listen(env.PORT, '0.0.0.0', () => {
     console.log(`StudyRoom Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
     console.log(`CORS allowed origin: ${env.CLIENT_ORIGIN}`);
     console.log('Socket.IO real-time server attached');
